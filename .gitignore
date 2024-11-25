@@ -23,5 +23,5 @@ pnpm-debug.log*
 *.sw?
 
 src/compare.vue
-src/junk.vue
+src/reserve.vue
 src/junk.ts
