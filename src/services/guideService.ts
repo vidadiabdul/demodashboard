@@ -1,73 +1,107 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/vue-query";
 import axios from "axios";
 import type { Guide } from "../types/guide";
 
-const baseUrl = "https://naturepulse.xyz/api/guide";
+const baseUrl = import.meta.env.VITE_GUIDE_API_URL;
 
-// Create a new guide
-export const createGuide = async (
-  data: Omit<Guide, "id">
-): Promise<Guide | void> => {
-  try {
-    const resp = await axios.post<Guide>(`${baseUrl}?action=createGuide`, data);
-    return resp.data;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-// Get all guides
-export const getAllGuides = async (): Promise<Guide[] | void> => {
-  try {
-    const resp = await axios.get<{ status: string; data: Guide[] }>(
-      `${baseUrl}?action=getAllGuides`
-    );
-    return resp.data.data;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-// Get a guide by ID
-export const getGuideById = async (id: number): Promise<Guide | void> => {
-  try {
-    const resp = await axios.get<{ status: string; data: Guide }>(
-      `${baseUrl}?action=getGuideById&id=${id}`
-    );
-    return resp.data.data;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-// Delete a guide by ID
-export const deleteGuideById = async (
-  id: number
-): Promise<{ status: string; message: string } | void> => {
-  try {
-    const resp = await axios.delete<{ status: string; message: string }>(
-      `${baseUrl}?action=deleteGuideById`,
-      {
-        data: { id },
-      }
-    );
-    return resp.data;
-  } catch (error) {
-    console.log(error);
-  }
-};
-
-// Update a guide by ID
-export const updateGuideById = async (
-  id: number,
-  data: Partial<Omit<Guide, "id">>
-): Promise<Guide | void> => {
-  try {
-    const resp = await axios.put<Guide>(`${baseUrl}?action=updateGuideById`, {
-      id,
-      ...data,
+const guideService = {
+  // Fetch all guides
+  getAll: () => {
+    return useQuery({
+      queryKey: ["guides"],
+      queryFn: async () => {
+        const { data } = await axios.get<Guide[]>(
+          `${baseUrl}?action=getAllGuides`
+        );
+        return data.data;
+      },
     });
-    return resp.data;
-  } catch (error) {
-    console.log(error);
-  }
+  },
+
+  // Fetch a guide by ID
+
+  getById: (id: Ref<number | null>) => {
+    return useQuery({
+      queryKey: ["guide", id],
+
+      queryFn: async () => {
+        if (!id.value) throw new Error("ID is required"); // Safety check
+
+        const { data } = await axios.get<Guide>(
+          `${baseUrl}?action=getGuideById&id=${id.value}`
+        );
+
+        return data.data;
+      },
+
+      enabled: computed(() => !!id.value), // Reactively enable fetching
+    });
+  },
+
+  // Create a new guide
+  create: () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+      mutationFn: async (data: Omit<Guide, "id">) => {
+        const { data: responseData } = await axios.post(
+          `${baseUrl}?action=createGuide`,
+          data
+        );
+        return responseData;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries(["guides"]); // Refresh guides list after successful creation
+      },
+    });
+  },
+
+  // Update a guide by ID
+  update: () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+      mutationFn: async ({
+        id,
+        data,
+      }: {
+        id: number;
+        data: Partial<Omit<Guide, "id">>;
+      }) => {
+        const { data: responseData } = await axios.put(
+          `${baseUrl}?action=updateGuideById`,
+          {
+            id,
+            ...data,
+          }
+        );
+        return responseData;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries(["guides"]); // Refresh guides list after update
+      },
+    });
+  },
+
+  // Delete a guide by ID
+  delete: () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+      mutationFn: async (id: number) => {
+        const { data } = await axios.delete(
+          `${baseUrl}?action=deleteGuideById&id=${id}`,
+          {
+            data: { id },
+          }
+        );
+        return data;
+      },
+      onSuccess: () => {
+        queryClient.invalidateQueries(["guides"]); // Refresh guides list after deletion
+      },
+    });
+  },
 };
+
+export default guideService;

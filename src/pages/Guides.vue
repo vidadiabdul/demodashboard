@@ -12,100 +12,111 @@
         prepend-icon="mdi-plus-box-outline"
         class="ms-3"
         color="#1F737F"
+        @click="openModal('add')"
       >
         Əlavə et
-        <v-dialog activator="parent" max-width="500">
-          <template #default="{ isActive }">
-            <v-card rounded="lg">
-              <v-card-title>Yeni soraqça</v-card-title>
-              <v-divider class="mb-4" />
-              <div class="pa-4 gap-2">
-                <v-text-field
-                  v-model="newGuideData.name"
-                  hide-details="auto"
-                  label="Soraqçanın adı"
-                  variant="outlined"
-                  color="#1C444D"
-                />
-                <v-text-field
-                  v-model="newGuideData.service"
-                  hide-details="auto"
-                  label="Operator/Xidmət"
-                  variant="outlined"
-                  class="my-4"
-                  color="#1C444D"
-                />
-                <v-text-field
-                  v-model="newGuideData.content"
-                  label="Məzmun"
-                  variant="outlined"
-                  color="#1C444D"
-                />
-              </div>
-              <v-divider class="mt-2" />
-              <v-card-actions class="my-2 d-flex justify-end">
-                <v-btn
-                  class="text-none"
-                  rounded="xl"
-                  text="Bağla"
-                  @click="isActive.value = false"
-                />
-                <v-btn
-                  class="text-none"
-                  color="#1F737F"
-                  text="Yarat"
-                  variant="flat"
-                  @click="
-                    () => {
-                      newGuide();
-                      isActive.value = false;
-                    }
-                  "
-                />
-              </v-card-actions>
-            </v-card>
-          </template>
-        </v-dialog>
       </v-btn>
     </v-col>
   </v-row>
+
   <v-data-table :headers="headers" :items="guides" class="mt-4" item-value="id">
     <template #item.action="{ item }">
       <v-icon
         class="me-2"
         color="#454545"
         title="View"
-        @click="openViewModal(item)"
+        @click="() => viewGuide(item.id)"
       >
         mdi-eye-outline
       </v-icon>
-      <v-icon color="#454545" title="Edit" @click="openEditModal(item)">
+      <v-icon
+        color="#454545"
+        title="Edit"
+        @click="() => openModal('edit', item)"
+      >
         mdi-pencil-outline
+      </v-icon>
+      <v-icon
+        color="red"
+        class="ms-2"
+        title="Delete"
+        @click="() => deleteGuide(item.id)"
+      >
+        mdi-delete-outline
       </v-icon>
     </template>
   </v-data-table>
 
-  <!-- View Modal -->
-  <v-dialog v-model="isViewModalOpen" max-width="500">
-    <v-card rounded="lg">
-      <v-card-title>Soraqçanın detalları</v-card-title>
-      <v-divider class="mb-4" />
-      <div>
+  <!-- Dialog for Add -->
+  <DialogWrapper
+    v-if="modalStates.add"
+    v-model="modalStates.add"
+    title="Yeni soraqça"
+  >
+    <template #content>
+      <div class="px-4">
+        <v-text-field
+          v-model="newGuideData.name"
+          hide-details="auto"
+          label="Soraqçanın adı"
+          variant="outlined"
+          color="#1C444D"
+        />
+        <v-text-field
+          v-model="newGuideData.service"
+          hide-details="auto"
+          label="Operator/Xidmət"
+          variant="outlined"
+          class="my-4"
+          color="#1C444D"
+        />
+        <v-text-field
+          v-model="newGuideData.content"
+          label="Məzmun"
+          variant="outlined"
+          color="#1C444D"
+        />
+      </div>
+    </template>
+    <template #actions>
+      <v-btn
+        class="text-none"
+        rounded="xl"
+        text="Bağla"
+        @click="closeModal('add')"
+      />
+      <v-btn
+        class="text-none"
+        color="#1F737F"
+        text="Yarat"
+        variant="flat"
+        @click="createNewGuide"
+      />
+    </template>
+  </DialogWrapper>
+
+  <!-- Dialog for View -->
+  <DialogWrapper
+    v-if="modalStates.view"
+    v-model="modalStates.view"
+    title="Soraqçanın detalları"
+  >
+    <template #content>
       <v-row>
         <v-col col="12" lg="6">
           <v-list-item title="Adı" />
         </v-col>
         <v-col col="12" lg="6">
-          <v-list-item :subtitle="viewedGuide.name" />
+          <v-list-item :subtitle="viewedGuide?.name" />
         </v-col>
       </v-row>
-      <v-divider class="mx-4"/>
+      <v-divider class="mx-4" />
       <v-row>
         <v-col col="12" lg="6">
           <v-list-item title="Operator/xidmət" />
         </v-col>
         <v-col col="12" lg="6">
-          <v-list-item :subtitle="viewedGuide.service" />
+          <v-list-item :subtitle="viewedGuide?.service" />
         </v-col>
       </v-row>
       <v-divider class="mx-4" />
@@ -114,29 +125,20 @@
           <v-list-item title="Məzmun" />
         </v-col>
         <v-col col="12" lg="6">
-          <v-list-item :subtitle="viewedGuide.content" />
+          <v-list-item :subtitle="viewedGuide?.content" />
         </v-col>
-      </v-row></div>
-      <v-divider class="mt-2" />
-      <v-card-actions class="my-2 d-flex justify-end">
-        <v-btn
-          class="text-none"
-          rounded="xl"
-          text="Dismiss"
-          @click="closeViewModal"
-        >
-          Bağla
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+      </v-row>
+    </template>
+  </DialogWrapper>
 
-  <!-- Edit Modal -->
-  <v-dialog v-model="isEditModalOpen" max-width="500">
-    <v-card rounded="lg">
-      <v-card-title>Soraqçanın redaktəsi</v-card-title>
-      <v-divider class="mb-4" />
-      <div class="pa-4 gap-2">
+  <!-- Dialog for Edit -->
+  <DialogWrapper
+    v-if="modalStates.edit"
+    v-model="modalStates.edit"
+    title="Soraqçanın redaktəsi"
+  >
+    <template #content>
+      <div class="px-4">
         <v-text-field
           v-model="editedGuide.name"
           hide-details="auto"
@@ -159,147 +161,142 @@
           color="#1C444D"
         />
       </div>
-      <v-divider class="mt-2" />
-      <v-card-actions class="my-2 d-flex justify-end">
-        <v-btn
-          class="text-none"
-          rounded="xl"
-          text="Dismiss"
-          @click="closeEditModal"
-        >
-          Dismiss
-        </v-btn>
-        <v-btn
-          class="text-none"
-          color="#1F737F"
-          text="Update guide"
-          variant="flat"
-          @click="updateGuide"
-        >
-          Update guide
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+    </template>
+    <template #actions>
+      <v-btn
+        class="text-none"
+        rounded="xl"
+        text="Dismiss"
+        @click="closeModal('edit')"
+      />
+      <v-btn
+        class="text-none"
+        color="#1F737F"
+        text="Update guide"
+        variant="flat"
+        @click="updateGuide"
+      />
+    </template>
+  </DialogWrapper>
 </template>
 
-<script lang="ts">
-import { defineComponent, onMounted, ref } from "vue";
-import {
-  getAllGuides,
-  createGuide,
-  getGuideById,
-  updateGuideById,
-} from "@/services/guideService";
+<script setup lang="ts">
+import { ref } from "vue";
+import { useQueryClient } from "@tanstack/vue-query";
+import guideService from "@/services/guideService";
 import type { Guide } from "@/types/guide";
+import DialogWrapper from "../components/DialogWrapper.vue";
 
-export default defineComponent({
-  name: "Guides",
-  setup() {
-    // Get all guides functionality
+// Constants for modal keys
+const ModalKeys = {
+  ADD: "add",
+  VIEW: "view",
+  EDIT: "edit",
+} as const;
 
-    const guides = ref<Guide[]>([]);
-
-    const headers = ref([
-      {
-        align: "start",
-        key: "name",
-        sortable: false,
-        title: "Adı",
-      },
-      { key: "service", title: "Operator/xidmət" },
-      { key: "content", title: "Məzmun" },
-      { key: "action", title: "" },
-    ]);
-
-    const fetchGuides = async () => {
-      try {
-        const data = await getAllGuides();
-        guides.value = data;
-      } catch (error) {
-        console.error("Error fetching guides:", error);
-      }
-    };
-
-    // New Guide functionality
-
-    const newGuideData = ref<Omit<Guide, "id">>({
-      name: "",
-      service: "",
-      content: "",
-    });
-
-    const newGuide = async () => {
-      try {
-        const createdGuide = await createGuide(newGuideData.value);
-        console.log("Guide successfully created:", createdGuide);
-      } catch (error) {
-        console.error("Error creating new guide:", error);
-      }
-    };
-
-    // View modal functionality
-    const viewedGuide = ref<Guide | null>(null);
-
-    const openViewModal = async (item: Guide) => {
-      try {
-        const data = await getGuideById(item.id);
-        viewedGuide.value = data;
-        isViewModalOpen.value = true;
-      } catch (error) {
-        console.error("Error fetching guide details:", error);
-      }
-    };
-    const isViewModalOpen = ref(false);
-
-    const closeViewModal = () => {
-      isViewModalOpen.value = false;
-    };
-
-    // Edit modal functionality
-
-    const editedGuide = ref<Guide | null>(null);
-
-    const openEditModal = (item: Guide) => {
-      editedGuide.value = { ...item };
-      isEditModalOpen.value = true;
-    };
-
-    const updateGuide = async () => {
-      if (editedGuide.value) {
-        try {
-          await updateGuideById(editedGuide.value.id, editedGuide.value);
-          await fetchGuides();
-          closeEditModal();
-        } catch (error) {
-          console.error("Error updating guide:", error);
-        }
-      }
-    };
-    const isEditModalOpen = ref(false);
-
-    const closeEditModal = () => {
-      isEditModalOpen.value = false;
-      editedGuide.value = null;
-    };
-
-    onMounted(fetchGuides);
-
-    return {
-      headers,
-      guides,
-      viewedGuide,
-      newGuideData,
-      newGuide,
-      isEditModalOpen,
-      isViewModalOpen,
-      editedGuide,
-      openEditModal,
-      closeEditModal,
-      updateGuide,
-      openViewModal,
-      closeViewModal,
-    };
-  },
+// Modal State Management
+const modalStates = ref<Record<string, boolean>>({
+  [ModalKeys.ADD]: false,
+  [ModalKeys.VIEW]: false,
+  [ModalKeys.EDIT]: false,
 });
+
+const openModal = (modalName: string, guide?: Guide) => {
+  if (modalName === ModalKeys.EDIT && guide) {
+    editedGuide.value = { ...guide };
+  }
+  modalStates.value[modalName] = true;
+};
+
+const closeModal = (modalName: string) => {
+  modalStates.value[modalName] = false;
+};
+
+// Guide Table Headers
+const headers = ref([
+  { align: "start", key: "name", sortable: false, title: "Adı" },
+  { key: "service", title: "Operator/xidmət" },
+  { key: "content", title: "Məzmun" },
+  { key: "action", title: "" },
+]);
+
+// Query Client
+const queryClient = useQueryClient();
+
+// Fetch Guides
+const { data: guides } = guideService.getAll();
+
+// Add New Guide
+const newGuideData = ref<Omit<Guide, "id">>({
+  name: "",
+  service: "",
+  content: "",
+});
+
+const createGuideMutation = guideService.create();
+
+const createNewGuide = () => {
+  createGuideMutation.mutate(newGuideData.value, {
+    onSuccess: () => {
+      queryClient.invalidateQueries(["guides"]);
+      newGuideData.value = { name: "", service: "", content: "" };
+      closeModal(ModalKeys.ADD);
+    },
+  });
+};
+
+// View Guide Details
+const guideId = ref<number | null>(null);
+const viewedGuide = ref<Guide | null>(null);
+const { data: guideDetails, refetch: fetchGuide } = guideService.getById(guideId);
+
+const viewGuide = async (id: number) => {
+  guideId.value = id;
+  try {
+    await fetchGuide();
+    viewedGuide.value = guideDetails.value;
+    openModal(ModalKeys.VIEW);
+  } catch (error) {
+    console.error("Failed to fetch guide details:", error);
+  }
+};
+
+// Edit Guide
+const editedGuide = ref<Partial<Guide>>({
+  name: "",
+  service: "",
+  content: "",
+});
+
+const updateGuideMutation = guideService.update();
+
+const updateGuide = () => {
+  if (editedGuide.value?.id) {
+    updateGuideMutation.mutate(
+      { id: editedGuide.value.id, data: editedGuide.value },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries(["guides"]);
+          closeModal(ModalKeys.EDIT);
+        },
+      }
+    );
+  }
+};
+
+// Delete Guide
+const deleteGuideMutation = guideService.delete();
+
+const deleteGuide = (id: number) => {
+  if (confirm("Are you sure you want to delete this guide?")) {
+    deleteGuideMutation.mutate(id, {
+      onSuccess: () => {
+        queryClient.invalidateQueries(["guides"]);
+      },
+      onError: (error) => {
+        console.error("Failed to delete guide:", error);
+      },
+    });
+  }
+};
 </script>

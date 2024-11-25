@@ -1,12 +1,12 @@
 import axios from "axios";
 import { useAuthStore } from "@/stores/auth";
 
-const API_URL = "https://naturepulse.xyz/api/auth?action=login";
+const baseUrl = import.meta.env.VITE_AUTH_API_URL;
 
 export const login = async (email: string, password: string) => {
   const authStore = useAuthStore();
   try {
-    const response = await axios.post(API_URL, { email, password });
+    const response = await axios.post(`${baseUrl}?action=login`, { email, password });
     if (response.data?.data.token) {
       authStore.login(response.data.data.token);
     }
